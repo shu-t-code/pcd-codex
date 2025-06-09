@@ -31,9 +31,26 @@ class PointCloudEdgeDataset(Dataset):
         return len(self.samples)
 
     def __getitem__(self, idx: int) -> Data:
+        """Return a graph data object for the given index.
+
+        If ``label_path`` equals ``point_path``, the file is expected to contain
+        seven columns ``[x, y, z, nx, ny, nz, label]``. Otherwise ``point_path``
+        should hold six columns ``[x, y, z, nx, ny, nz]`` and ``label_path`` a
+        single label column.
+        """
         point_path, label_path = self.samples[idx]
-        pts = np.load(point_path)  # (N,6)
-        labels = np.load(label_path)  # (N,1) or (N,)
+        pts = np.load(point_path)
+
+        if label_path == point_path:
+            if pts.shape[1] < 7:
+                raise ValueError(
+                    f"Expected at least 7 columns when point and label paths are the "
+                    f"same, got shape {pts.shape}"
+                )
+            labels = pts[:, 6]
+            pts = pts[:, :6]
+        else:
+            labels = np.load(label_path)
 
         pts = torch.from_numpy(pts).float()
         labels = torch.from_numpy(labels).view(-1).float()
